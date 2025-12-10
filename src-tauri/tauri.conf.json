@@ -41,7 +41,7 @@
       "res/verify.xml",
       "res/misc_tofastbootd.img",
       "res/misc_torecovery.img",
-      "img/"
+      "img/placeholder"
     ]
   }
 }
