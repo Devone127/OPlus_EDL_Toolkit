@@ -435,6 +435,11 @@
         await invoke("read_gpt");
     }
 
+    async function readDeviceInfo() {
+        let result = await invoke("read_device_info");
+        alert(result);
+    }
+
     window.onload = function () {
         document.getElementById('btn_selectLoaderFile').addEventListener('click', async () => {
             try {
@@ -675,6 +680,7 @@ setInterval(updatePort, 1000);
                     <button class="btn-orange" @click="writePart">{{ t('operation.writePart') }}</button>
                     <button class="btn-orange" @click="writeFromXML">{{ t('operation.writeFromXML') }}</button>
                     <button class="btn-brown" @click="saveToXML">{{ t('operation.createXML') }}</button>
+                    <button class="btn-brown" @click="readDeviceInfo">{{ t('operation.readDeviceInfo') }}</button>
                 </div>
               </form>
             </div>

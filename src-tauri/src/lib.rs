@@ -1,15 +1,18 @@
 ﻿mod gpt_parser;
+mod qdl;
+
+use quick_xml::de::from_str;
+use quick_xml::se::to_string;
+use regex::Regex;
+use serde::{Deserialize, Serialize};
 use serialport::{available_ports, SerialPortType};
 use std::env;
 use std::fs;
 use std::fs::metadata;
-use std::path::{Path, PathBuf};
 use std::io;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use tauri::{AppHandle, Emitter};
-use quick_xml::de::from_str;
-use quick_xml::se::to_string;
-use serde::{Deserialize, Serialize};
 
 // Define struct for the root <data> node in XML
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
@@ -202,6 +205,33 @@ pub fn parse_file_path(full_path: &str) -> (String, String) {
     (file_name, directory)
 }
 
+fn analysis_info(input: &str) -> String {
+    let mut output = String::new();
+    let re = Regex::new(r"0x[0-9a-fA-F]+").expect("Reg compile failed");
+    input.lines().for_each(|line| {
+        if line.contains("Device Total Physical Partitions") {
+            if let Some(hex_match) = re.find(line) {
+                let hex_str = hex_match.as_str();
+                match u64::from_str_radix(&hex_str[2..], 16) {
+                    Ok(decimal) => { output = format!("{}\n Device Total Physical Partitions:{}", output, decimal);},
+                    Err(e) => eprintln!("Convert Failed: {}", e),
+                }
+            }
+            println!("{}", line);
+        } else if line.contains("Device Serial Number") {
+            if let Some(hex_match) = re.find(line) {
+                let hex_str = hex_match.as_str();
+                output = format!("{}\n Device Serial Number:{}", output, hex_str);
+            }
+        } else if line.contains("UFS Inquiry Command Output") {
+            if let Some((_, content)) = line.split_once("Output:") {
+                let model = content.replace("'", " ");
+                output = format!("{}\n Storage:{}", output, model.trim());
+            }
+        } 
+    });
+    return output;
+}
 
 fn setup_env(app: &AppHandle) -> Config {
     let mut config = Config {
@@ -258,10 +288,10 @@ fn write_to_file(path: &str, output_dir: &str, content: &str) {
     }
 }
 
-fn exec_cmd(app: &AppHandle, cmd: &[&str], current_dir:&Path) {
+fn exec_cmd(app: &AppHandle, cmd: &[&str], current_dir:&Path) -> String {
     if cmd.is_empty() {
         let _ = app.emit("log_event", "[Error]");
-        return;
+        return "[Error] cmd is empty".to_string();
     }
     let mut exe_cmd = Command::new(cmd[0]);
     let mut cmd_str = format!("{} ", cmd[0]);
@@ -274,7 +304,7 @@ fn exec_cmd(app: &AppHandle, cmd: &[&str], current_dir:&Path) {
     let _ = app.emit("log_event", &format!("{}", cmd_str));
     let output = exe_cmd.current_dir(current_dir).output();
     
-    let _result = match output {
+    let result = match output {
         Ok(output) => {
             if output.status.success() {
                 let _ = app.emit("log_event", "[OK]");
@@ -283,17 +313,18 @@ fn exec_cmd(app: &AppHandle, cmd: &[&str], current_dir:&Path) {
             } else {
                 let _ = app.emit("log_event", "[Error]");
                 let err_msg = String::from_utf8_lossy(&output.stderr).to_string();
-                println!("Error: {}", err_msg);
-                err_msg
+                println!("[Error]: {}", err_msg);
+                format!("[Error]: {}", err_msg)
             }
         }
         Err(e) => {
             let _ = app.emit("log_event", "[Error]");
             let err_msg = format!("Execution failed: {}", e);
-            println!("Error: {}", err_msg);
-            err_msg
+            println!("[Error]: {}", err_msg);
+            format!("[Error]: {}", err_msg)
         }
     };
+    return result;
 }
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -323,6 +354,9 @@ fn update_port() -> (String, String) {
 
 #[tauri::command]
 fn reboot_to_system(app: AppHandle) {
+    let port = "\\.\\COM5".to_string();
+    let client = qdl::SaharaClient::new(Some(port));
+    /////
     let config = setup_env(&app);
     if config.is_connect == false {
         return ();
@@ -656,6 +690,24 @@ fn read_gpt(app: AppHandle) {
     let _ = app.emit("update_partition_table", &read_xml);
 }
 
+#[tauri::command]
+fn read_device_info(app: AppHandle) -> String {
+    let config = setup_env(&app);
+    if config.is_connect == false {
+        return "Device not found".to_string();
+    }
+    let cmd = "<?xml version=\"1.0\" ?><data><getstorageinfo physical_partition_number=\"0\" /></data>";
+    write_to_file("cmd.xml", "res", &cmd);
+    let _ = app.emit("log_event", &format!("Reboot to EDL..."));
+    let cmds = ["cmd", "/c", &config.fh_loader_path, &config.port_conn_str, "--memoryname=ufs", 
+               "--sendxml=res/cmd.xml", "--noprompt", "--skip_configure", "--mainoutputdir=res"];
+    let result = exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
+    if result.starts_with("[Error]") == false {
+        return analysis_info(&result);
+    }
+    return "".to_string();
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -663,7 +715,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![update_port, send_loader, read_part, write_part, read_gpt,
-        reboot_to_system, reboot_to_recovery, reboot_to_fastboot, reboot_to_edl, save_to_xml, write_from_xml])
+        reboot_to_system, reboot_to_recovery, reboot_to_fastboot, reboot_to_edl, save_to_xml, write_from_xml, read_device_info])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

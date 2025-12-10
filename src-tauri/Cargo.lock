@@ -2607,7 +2607,7 @@ dependencies = [
 
 [[package]]
 name = "oplus_edl_toolkit"
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
  "anstream",
  "anyhow",
@@ -2618,6 +2618,7 @@ dependencies = [
  "owo-colors",
  "pbr",
  "quick-xml 0.38.4",
+ "regex",
  "rusb",
  "serde",
  "serde_json",

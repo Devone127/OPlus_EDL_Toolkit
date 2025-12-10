@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "oplus_edl_toolkit",
-  "version": "0.5.0",
+  "version": "0.6.2",
   "identifier": "me.snowwolf725",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "OPlus EDL Toolkit V0.5",
+        "title": "OPlus EDL Toolkit V0.6",
         "width": 1400,
         "height": 800,
         "maximized": true

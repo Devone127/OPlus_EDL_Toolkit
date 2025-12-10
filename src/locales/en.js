@@ -34,6 +34,7 @@ export default {
 		writePart: 'Write Partition',
 		writeFromXML: 'Write from XML',
 		createXML: 'Save to XML',
+		readDeviceInfo: 'Read device Info',
 		useBuildIn: 'Use the build-in fh_loader',
 		saveAlert: 'Please select at least one partition.',
 	},

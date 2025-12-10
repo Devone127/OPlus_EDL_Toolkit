@@ -1,6 +1,6 @@
 [package]
 name = "oplus_edl_toolkit"
-version = "0.6.1"
+version = "0.6.2"
 description = "Oplus EDL Toolkit"
 authors = ["SnowWolf725"]
 edition = "2024"
@@ -27,6 +27,7 @@ indexmap = "2.5.0"
 owo-colors = "4.1.0"
 pbr = "1.1.1"
 quick-xml = { version = "0.38.4", features = ["serde", "serialize"] }  
+regex = "1.0"
 rusb = "0.9.4"
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"

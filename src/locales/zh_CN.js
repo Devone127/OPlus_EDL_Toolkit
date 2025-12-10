@@ -34,6 +34,7 @@
 		writePart: '写入选中分区',
 		writeFromXML: 'XML写入固件',
 		createXML: '保存至XML',
+		readDeviceInfo: '读设备信息',
 		useBuildIn: '使用內建fh_loader',
 		saveAlert: '请至少选取一个分区',
 	},
