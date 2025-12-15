@@ -27,8 +27,9 @@ jobs:
 
       - name: get version
         run: |
+          export PACKAGE_VERSION=$(node -p "require('./package.json').version")
           echo "PACKAGE_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
-          echo "PORTABLE_FILE_NAME=oplus_edl_toolkit-${{ env.PACKAGE_VERSION }}.x86_64_portable.zip" >> $GITHUB_ENV        
+          echo "PORTABLE_FILE_NAME=oplus_edl_toolkit-$PACKAGE_VERSION.x86_64_portable.zip" >> $GITHUB_ENV        
           
       - name: create release
         id: create-release
