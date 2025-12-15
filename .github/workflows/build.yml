@@ -91,17 +91,27 @@ jobs:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
 
-      - name: compress (windows only)oplus_edl_toolkit
+      - name: compress oplus_edl_toolkit  (windows only)
         if: matrix.platform == 'windows-latest'
         run: |
           Compress-Archive -Path D:\a\OPlus_EDL_Toolkit\OPlus_EDL_Toolkit\src-tauri\target\release\oplus_edl_toolkit.exe -Destination oplus_edl_toolkit.zip
 
-      - name: upload artifact
+      - name: Upload an Asset in GitHub Release (windows only)
         if: matrix.platform == 'windows-latest'
-        uses: actions/upload-artifact@v4
+        uses: "actions/github-script@v6"
+        env:
+          release_id: ${{ needs.create-release.outputs.release_id }}
         with:
-          name: compressed-files
-          path: oplus_edl_toolkit.zip
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          script: |
+            const fs = require('fs').promises;
+            await github.rest.repos.uploadReleaseAsset({
+              name: 'oplus_edl_toolkit_portable.zip',
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: process.env.release_id,
+              data: await fs.readFile('./oplus_edl_toolkit.zip')  # The file to upload.
+            });
           
   publish-release:
     permissions:
