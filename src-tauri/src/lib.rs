@@ -83,6 +83,10 @@ pub struct Config {
     
     pub sahara_server_path: String,
 
+    pub fh_loader_path_linux: String,
+    
+    pub sahara_server_path_linux: String,
+
     pub port_conn_str: String,
 
     pub port_str: String,
@@ -252,6 +256,8 @@ fn setup_env(app: &AppHandle) -> Config {
     let mut config = Config {
         fh_loader_path: String::new(),
         sahara_server_path: String::new(),
+        fh_loader_path_linux: String::new(),
+        sahara_server_path_linux: String::new(),
         port_conn_str: String::new(),
         port_str: String::new(),
         current_dir: PathBuf::new(),
@@ -272,12 +278,16 @@ fn setup_env(app: &AppHandle) -> Config {
     let tools_dir = parent_dir.join("tools");
     let fhloader_path = tools_dir.join("fh_loader.exe");
     let sahara_server_path = tools_dir.join("QSaharaServer.exe");
+    let fhloader_path_linux = tools_dir.join("fh_loader");
+    let sahara_server_path_linux = tools_dir.join("QSaharaServer");
     
     config.current_dir = parent_dir;
     config.port_conn_str = port_conn_str;
     config.port_str = port_str;
     config.fh_loader_path = fhloader_path.to_str().unwrap_or("fh_loader.exe").to_string();
     config.sahara_server_path = sahara_server_path.to_str().unwrap_or("QSaharaServer.exe").to_string();
+    config.fh_loader_path_linux = fhloader_path_linux.to_str().unwrap_or("fh_loader").to_string();
+    config.sahara_server_path_linux = sahara_server_path_linux.to_str().unwrap_or("QSaharaServer").to_string();
     config.is_connect = !config.port_conn_str.is_empty();
     return config;
 }
@@ -309,6 +319,11 @@ fn exec_cmd(app: &AppHandle, cmd: &[&str], current_dir:&Path) -> String {
         return "[Error] cmd is empty".to_string();
     }
     let mut exe_cmd = Command::new(cmd[0]);
+    #[cfg(target_os = "windows")]
+    {
+      use std::os::windows::process::CommandExt;
+      exe_cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW constant
+    }
     let mut cmd_str = format!("{} ", cmd[0]);
     for (_index, s) in cmd.iter().enumerate() {
         if _index != 0 {
@@ -558,33 +573,61 @@ fn send_loader(app: AppHandle, loader: &str, digest: &str, sig: &str, native: bo
         let loader_str = r"13:".to_owned() + loader;
         let digest_str = r"--signeddigests=".to_owned() + digest;
         let sig_str = r"--signeddigests=".to_owned() + sig;
-        let _ = app.emit("log_event", &format!("Send Loader..."));
-        let cmds = ["cmd", "/c", &config.sahara_server_path, "-p", &config.port_str, "-s", &loader_str];
-        exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
+        #[cfg(target_os = "windows")] {
+            let _ = app.emit("log_event", &format!("Send Loader..."));
+            let cmds = ["cmd", "/c", &config.sahara_server_path, "-p", &config.port_str, "-s", &loader_str];
+            exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
     
-        let _ = app.emit("log_event", &format!("Send Digest..."));
-        let cmds = ["cmd", "/c", &config.fh_loader_path, &config.port_conn_str, &digest_str, "--testvipimpact", "--noprompt", "--skip_configure", "--mainoutputdir=res"];
-        exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
+            let _ = app.emit("log_event", &format!("Send Digest..."));
+            let cmds = ["cmd", "/c", &config.fh_loader_path, &config.port_conn_str, &digest_str, "--testvipimpact", "--noprompt", "--skip_configure", "--mainoutputdir=res"];
+            exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
 
-        let _ = app.emit("log_event", &format!("Send Transfer Config..."));
-        let cmds = ["cmd", "/c", &config.fh_loader_path, &config.port_conn_str, "--sendxml=res/transfercfg.xml", "--noprompt", "--skip_configure", "--mainoutputdir=res"];
-        exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
+            let _ = app.emit("log_event", &format!("Send Transfer Config..."));
+            let cmds = ["cmd", "/c", &config.fh_loader_path, &config.port_conn_str, "--sendxml=res/transfercfg.xml", "--noprompt", "--skip_configure", "--mainoutputdir=res"];
+            exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
 
-        let _ = app.emit("log_event", &format!("Send Verify..."));
-        let cmds = ["cmd", "/c", &config.fh_loader_path, &config.port_conn_str, "--sendxml=res/verify.xml", "--noprompt", "--skip_configure", "--mainoutputdir=res"];
-        exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
+            let _ = app.emit("log_event", &format!("Send Verify..."));
+            let cmds = ["cmd", "/c", &config.fh_loader_path, &config.port_conn_str, "--sendxml=res/verify.xml", "--noprompt", "--skip_configure", "--mainoutputdir=res"];
+            exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
 
-        let _ = app.emit("log_event", &format!("Send Sig..."));
-        let cmds = ["cmd", "/c", &config.fh_loader_path, &config.port_conn_str, &sig_str, "--testvipimpact", "--noprompt", "--skip_configure", "--mainoutputdir=res"];
-        exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
+            let _ = app.emit("log_event", &format!("Send Sig..."));
+            let cmds = ["cmd", "/c", &config.fh_loader_path, &config.port_conn_str, &sig_str, "--testvipimpact", "--noprompt", "--skip_configure", "--mainoutputdir=res"];
+            exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
 
-        let _ = app.emit("log_event", &format!("Send SHA256 init..."));
-        let cmds = ["cmd", "/c", &config.fh_loader_path, &config.port_conn_str, "--sendxml=res/sha256init.xml", "--noprompt", "--skip_configure", "--mainoutputdir=res"];
-        exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
+            let _ = app.emit("log_event", &format!("Send SHA256 init..."));
+            let cmds = ["cmd", "/c", &config.fh_loader_path, &config.port_conn_str, "--sendxml=res/sha256init.xml", "--noprompt", "--skip_configure", "--mainoutputdir=res"];
+            exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
 
-        let _ = app.emit("log_event", &format!("Send Memory Config..."));
-        let cmds = ["cmd", "/c", &config.fh_loader_path, &config.port_conn_str, "--memoryname=ufs", "--sendxml=res/cfg.xml", "--search_path=res", "--noprompt", "--mainoutputdir=res"];
-        exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
+            let _ = app.emit("log_event", &format!("Send Memory Config..."));
+            let cmds = ["cmd", "/c", &config.fh_loader_path, &config.port_conn_str, "--memoryname=ufs", "--sendxml=res/cfg.xml", "--search_path=res", "--noprompt", "--mainoutputdir=res"];
+            exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
+        }
+        #[cfg(target_os = "linux")] {
+            let _ = app.emit("log_event", &format!("Send Loader..."));
+            let cmds = [&config.sahara_server_path_linux, "-p", &config.port_str, "-s", &loader_str];
+            exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
+    
+            let _ = app.emit("log_event", &format!("Send Digest..."));
+            let cmds = [&config.fh_loader_path_linux, &config.port_conn_str, &digest_str, "--testvipimpact", "--noprompt", "--mainoutputdir=res"];
+            exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
+
+            let _ = app.emit("log_event", &format!("Send Transfer Config..."));
+            let cmds = [&config.fh_loader_path_linux, &config.port_conn_str, "--sendxml=res/transfercfg.xml", "--noprompt", "--mainoutputdir=res"];
+            exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
+
+            let _ = app.emit("log_event", &format!("Send Verify..."));
+            let cmds = [&config.fh_loader_path_linux, &config.port_conn_str, "--sendxml=res/verify.xml", "--noprompt", "--mainoutputdir=res"];
+            exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
+
+            let _ = app.emit("log_event", &format!("Send Sig..."));
+            let cmds = [&config.fh_loader_path_linux, &config.port_conn_str, &sig_str, "--testvipimpact", "--noprompt", "--mainoutputdir=res"];
+            exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
+
+            let _ = app.emit("log_event", &format!("Send SHA256 init..."));
+            let cmds = [&config.fh_loader_path_linux, &config.port_conn_str, "--sendxml=res/sha256init.xml", "--memoryname=ufs", "--zlpawarehost=1", "--noprompt", "--mainoutputdir=res"];
+            exec_cmd(&app, &cmds, PathBuf::from(".").as_path());
+        }
+        
     }
     format!("OK")
 }

@@ -4,6 +4,7 @@
 		loader: '引導文件:',
 		digest: 'Digest文件:',
 		sign: 'Sign:',
+		edlFolder: 'EDL 刷機包資料夾',
 		selectBtn: '選擇',
 		portStatus: 'EDL設備已連接',
 		portStatusError: '未找到EDL設備',
@@ -38,6 +39,9 @@
 		switchSlot: '切換槽位',
 		useBuildIn: '使用內建fh_loader',
 		saveAlert: '請至少選取一個分區',
+	},
+	edl: {
+		title: 'EDL 刷機包',
 	},
 	log: {
 		title: '操作日志',

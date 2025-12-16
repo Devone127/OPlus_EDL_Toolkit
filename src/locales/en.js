@@ -3,7 +3,8 @@ export default {
 		title: 'Loader & Config Files',
 		loader: 'Loader:',
 		digest: 'Digest:',
-		sign:'Sign:',
+		sign: 'Sign:',
+		edlFolder: 'EDL package folder',
 		selectBtn: 'Select',
 		portStatus: 'EDL device connected',
 		portStatusError: 'EDL device not found',
@@ -38,6 +39,9 @@ export default {
 		switchSlot: 'Switch Slot',
 		useBuildIn: 'Use the build-in fh_loader',
 		saveAlert: 'Please select at least one partition.',
+	},
+	edl: {
+		title: 'EDL package',
 	},
 	log: {
 		title: 'Log',

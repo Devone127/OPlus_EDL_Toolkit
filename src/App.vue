@@ -10,8 +10,14 @@
     const slotDialogRef = ref(null);
     const isDialogOpen = ref(false);
     const isBuildIn = ref(false);
-
+    const activeTab = ref('tab_part');
+    
     const { t, locale, availableLocales } = useI18n();
+
+    const tabList = ref([
+        { key: 'tab_part', label: t('part.title') },
+        { key: 'tab_edl', label: t('edl.title') },
+    ]);
 
     const tableColumns = ref([
         { key: 'chk',       label: ''                    , width: '5%' },
@@ -543,18 +549,17 @@
                 console.error('Error occurred while selecting a file:', error);
             }
         });
-        document.getElementById('btn_selectPatchXmlFile').addEventListener('click', async () => {
+        document.getElementById('btn_selectEdlFolder').addEventListener('click', async () => {
             try {
-                const file = await open({
+                const dir = await open({
                     multiple: false,
-                    directory: false,
-                    filters: [{ name: 'XML file', extensions: ['xml'] }],
+                    directory: true,
                 });
-                if (file) {
-                    document.getElementById('patchXmlPathDisplay').value = file;
+                if (dir) {
+                    document.getElementById('edlFolderPathDisplay').value = dir;
                 }
             } catch (error) {
-                console.error('Error occurred while selecting a file:', error);
+                console.error('Error occurred while selecting a folder:', error);
             }
         });
 
@@ -634,43 +639,56 @@ setInterval(updatePort, 1000);
                         <button class="select-btn" id="btn_selectRawXmlFile">{{ t('config.selectBtn')}}</button>
                     </div>
                     <div class="form-group">
-                        <label>Patch XML:</label>
-                        <input type="text" class="file-input" id="patchXmlPathDisplay" value="res/patch.xml">
-                        <button class="select-btn" id="btn_selectPatchXmlFile">{{ t('config.selectBtn')}}</button>
+                        <label>{{ t('config.edlFolder') }}:</label>
+                        <input type="text" class="file-input" id="edlFolderPathDisplay" value="EDL Package Folder">
+                        <button class="select-btn" id="btn_selectEdlFolder">{{ t('config.selectBtn')}}</button>
                     </div>
                 </div>
 
-                <!-- Device Partition Table -->
                 <div class="left-bottom-table-wrapper">
-                    <div class="section-title">
-                        <span>{{ t('part.title') }}</span>
+                    <div class="tab-nav" style="display: flex; background-color: inherit; border-bottom: 1px solid #ddd;">
+                        <div v-for="tab in tabList"
+                             :key="tab.key"
+                             class="tab-item"
+                             :class="{ active: activeTab === tab.key }"
+                             @click="activeTab = tab.key"
+                             style="padding: 10px 20px; cursor: pointer; border-right: 1px solid #ddd; transition: background 0.3s;">
+                            {{ tab.label }}
+                        </div>
                     </div>
-                    <div class="table-header">
-                        <input type="text" id="partFilter" :placeholder="$t('part.filter')">
-                        <button id="selectAll" @click="selectAll">{{ t('part.selectAll') }}</button>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th v-for="col in tableColumns" :key="col.key" :style="{ width: col.width }">
-                                        {{ col.label }}
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody class="part-table" id="partTable">
-                                <tr v-for="(item, index) in tableData" :key="index">
-                                    <td><input v-model="item.chk" type='checkbox'></td>
-                                    <td>{{ item.lun }}</td>
-                                    <td class="partName">{{ item.partName }}</td>
-                                    <td>{{ item.partSize }}</td>
-                                    <td>{{ item.partStart }}</td>
-                                    <td>{{ item.partNum }}</td>
-                                    <td>{{ item.imgPath }}</td>
-                                    <td><button id='{{ item.sel }}' @click="selectImgPath(item)">{{ t('config.selectBtn') }}</button></td>
-                                </tr>
-                            </tbody>
-                        </table>
+
+                    <!-- Device Partition Table -->
+                    <div class="part-table" v-show="activeTab === 'tab_part'">
+                        <div class="section-title">
+                            <span>{{ t('part.title') }}</span>
+                        </div>
+                        <div class="table-header">
+                            <input type="text" id="partFilter" :placeholder="$t('part.filter')">
+                            <button id="selectAll" @click="selectAll">{{ t('part.selectAll') }}</button>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th v-for="col in tableColumns" :key="col.key" :style="{ width: col.width }">
+                                            {{ col.label }}
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="part-table" id="partTable">
+                                    <tr v-for="(item, index) in tableData" :key="index">
+                                        <td><input v-model="item.chk" type='checkbox'></td>
+                                        <td>{{ item.lun }}</td>
+                                        <td class="partName">{{ item.partName }}</td>
+                                        <td>{{ item.partSize }}</td>
+                                        <td>{{ item.partStart }}</td>
+                                        <td>{{ item.partNum }}</td>
+                                        <td>{{ item.imgPath }}</td>
+                                        <td><button id='{{ item.sel }}' @click="selectImgPath(item)">{{ t('config.selectBtn') }}</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -1008,5 +1026,12 @@ setInterval(updatePort, 1000);
         }
         .slot-btn-b:hover {
             background-color: #c026d3;
+        }
+        .tab-item.active {
+            background-color: #d946ef;
+            margin-bottom: -1px;
+        }
+        .tab-item:hover {
+            background-color: #5b86e5;
         }
 </style>
